@@ -18,6 +18,10 @@
             elevator.on("floor_button_pressed", function(floorNum) {
                 if (elevator.destinationQueue.indexOf(floorNum) === -1) {
                     elevator.goToFloor(floorNum);
+                    //sort queue to make sure we visit
+                    //each floor in order.
+                    elevator.destinationQueue.sort();
+                    elevator.checkDestinationQueue();
                 }
             });
         }
@@ -27,7 +31,9 @@
             elevators.forEach(function (elevator) {
                 if (elevator.destinationQueue.indexOf(floorNo) === -1 && floorNo != null) {
                     elevator.goToFloor(floorNo);
+                    // prevent future floor assignment
                     floorNo = null;
+                    // place assigned elevator at end of queue
                     rotateElevators(elevator);
                 }
             });
