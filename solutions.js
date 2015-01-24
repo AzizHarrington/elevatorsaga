@@ -9,12 +9,43 @@
                 forEach(floors, function (floor) {
                     checkForPassenger(floor, elevator);
                 });
+                checkFloorButton(elevator);
             });
+
+            checkPassingFloors(elevator);
+        }
+
+        function checkPassingFloors(elevator) {
+            elevator.on("passing_floor", function(floorNum, direction) {
+                if (direction === "up") {
+                    decideToStop(elevator, floorNum);
+                } else if (direction === "down") {
+                    decideToStop(elevator, floorNum);
+                }
+            });
+        }
+
+        function decideToStop(elevator, floorNum) {
+            var floorIndex = elevator.destinationQueue.indexOf(floorNum);
+            if (floorIndex > -1) {
+                elevator.destinationQueue.splice(floorIndex, 1);
+                elevator.destinationQueue.push(floorIndex);
+            }
+        }
+
+        function checkFloorButton(elevator) {
+            elevator.on("floor_button_pressed", function(floorNum) {
+                if (elevator.destinationQueue.indexOf(floorNum) === -1) {
+                    elevator.goToFloor(floorNum);
+                }
+            })
         }
 
         function checkForPassenger(floor, elevator) {
             floor.on("up_button_pressed down_button_pressed", function () {
-                elevator.goToFloor(floor.floorNum())
+                if (elevator.destinationQueue.indexOf(floor.floorNum()) === -1) {
+                    elevator.goToFloor(floor.floorNum());
+                }
             });
         }
 
