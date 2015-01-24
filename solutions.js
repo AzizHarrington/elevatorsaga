@@ -11,25 +11,25 @@
                 });
                 checkFloorButton(elevator);
             });
-
             checkPassingFloors(elevator);
         }
 
         function checkPassingFloors(elevator) {
             elevator.on("passing_floor", function(floorNum, direction) {
-                if (direction === "up") {
-                    decideToStop(elevator, floorNum);
-                } else if (direction === "down") {
-                    decideToStop(elevator, floorNum);
-                }
+                decideToStop(elevator, floorNum);
             });
         }
 
         function decideToStop(elevator, floorNum) {
             var floorIndex = elevator.destinationQueue.indexOf(floorNum);
+            console.log("checking queue for floor " + floorNum);
+            console.log(elevator.destinationQueue);
             if (floorIndex > -1) {
                 elevator.destinationQueue.splice(floorIndex, 1);
-                elevator.destinationQueue.push(floorIndex);
+                elevator.destinationQueue.unshift(floorIndex);
+                elevator.checkDestinationQueue();
+                console.log("stopping at " + floorNum);
+                console.log(elevator.destinationQueue);
             }
         }
 
