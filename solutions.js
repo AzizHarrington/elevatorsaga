@@ -1,98 +1,109 @@
 {
     init: function(elevators, floors) {
-        Array.prototype.max = function() {
-          return Math.max.apply(null, this);
-        };
 
-        floors.forEach(function (floor) {
+        // check floors & elevators for events
+        map(floors, checkForButtonPress);
+        map(elevators, checkFloorButton);
+        map(elevators, checkPassingFloor);
+        // seems like most people board at ground floor
+        // comment out to optimize for moves
+        map(elevators, checkForIdle);
+
+        // button pressed at floor
+        function checkForButtonPress(floor) {
             floor.on("up_button_pressed down_button_pressed", function() {
                 assignElevator(floor);
             });
-        });
+        }
 
-        elevators.forEach(function (elevator) {
-            checkFloorButton(elevator);
-            resetElevator(elevator);
-        });
-
+        // button pressed inside elevator
         function checkFloorButton(elevator) {
             elevator.on("floor_button_pressed", function(floorNum) {
                 if (elevator.destinationQueue.indexOf(floorNum) === -1) {
                     elevator.goToFloor(floorNum);
-                    //sort queue to make sure we visit
-                    //each floor in order.
-                    //uncomment to optimize for moves
-                    elevator.destinationQueue.sort();
-                    elevator.checkDestinationQueue();
                 }
             });
         }
 
-        function resetElevator(elevator) {
-            if (elevator.destinationQueue.length === 0 && elevator.loadFactor() > 0) {
-                floors.forEach(function (floor) {
-                    elevator.goToFloor(floor.floorNum());
-                });
-            }
+        // if passing floor in destination queue, lets
+        // stop there, then be on our way
+        function checkPassingFloor(elevator) {
+            elevator.on("passing_floor", function(floorNum, direction) {
+                var queue = elevator.destinationQueue;
+                var index = queue.indexOf(floorNum);
+                //console.log('performing check for ' + floorNum);
+                if (index > -1) {
+                    queue.splice(index, 1);
+                    elevator.goToFloor(floorNum, true);
+                }
+            });
         }
 
+        // if idle, send back to ground floor
+        function checkForIdle(elevator) {
+            elevator.on("idle", function() {
+                elevator.goToFloor(0, true);
+            });
+        }
+
+        // determine best elevator to send
+        // based on suitability score
         function assignElevator(floor) {
             var floorNo = floor.floorNum();
-            var elevator;
+            var elevatorScores = map(elevators, scoreElevators);
+            var bestScore = reduce(elevatorScores, findBest, null);
+            console.log('winning score ' + bestScore[1]);
+            var elevator = bestScore[0];
 
-            var onFloor = reduce(elevators, checkOnFloor, null);
-            var enRoute = reduce(elevators, checkForFloorInQueue, null);
-            var lowestLoad = reduce(elevators, checkLoad, null);
+            elevator.goToFloor(floorNo);
 
-            if (onFloor !== null) {
-                onFloor.goToFloor(floorNo, true);
-            } else if (enRoute !== null) {
-                // pass, since elevator is enroute
-            } else if (lowestLoad != null) {
-                lowestLoad.goToFloor(floorNo);
-            } else {
-                roundRobin(elevators[0]);
-            }
-
-            function checkOnFloor(current, elevator) {
-                if (elevator.currentFloor() === floorNo){
-                    if (elevator.loadFactor() < 4 && elevator.destinationQueue < 4) {
-                        return elevator;
-                    }
-                }
-                    return current;
-            }
-            function checkForFloorInQueue(current, elevator) {
-                if (elevator.destinationQueue.indexOf(floorNo) > -1){
-                    if (elevator.loadFactor() < 4 && elevator.destinationQueue < 4) {
-                        return elevator;
-                    }
-                }
-                    return current;
-            }
-
-            //todo: implement distance check
-            function checkDistanceToFloor(current) {}
-
-            function checkLoad(current, elevator) {
+            function findBest(current, elevatorScore) {
+                // lower ranking is better
                 if (current === null) {
-                    return elevator;
-                } else if (elevator.loadFactor() < current.loadFactor()){
-                    return elevator;
+                    return elevatorScore;
+                } else if (elevatorScore[1] < current[1]) {
+                    return elevatorScore;
                 } else {
                     return current;
                 }
             }
 
-            function roundRobin(elevator) {
-                elevator.goToFloor(floorNo);
-                // place assigned elevator at end of queue
-                rotateElevators(elevator);
-            }
-            function rotateElevators(elevator) {
-                var index = elevators.indexOf(elevator);
-                elevators.splice(index, 1);
-                elevators.push(elevator);
+            function scoreElevators(elevator) {
+                var score;
+                var queue = elevator.destinationQueue;
+
+                var distanceFromFloor = getDistance();
+                var floorInQueue = queue.indexOf(floorNo) > -1
+                var load = elevator.loadFactor();
+
+                if (floorInQueue) {
+                    // elevator is going to this floor
+                    // so give it best score
+                    score = 0;
+                } else {
+                    // otherwise base score on
+                    // how far away it is/will be
+                    score = distanceFromFloor;
+                }
+
+                console.log('score before ' + score);
+                console.log('  load ' + load);
+
+                // apply load factor to score
+                score = score + (10 * load);
+                console.log('  score after ' + score);
+
+                return [elevator, score];
+
+                function getDistance() {
+                    var location;
+                    if (queue.length === 0) {
+                        location = elevator.currentFloor();
+                    } else {
+                        location = queue[queue.length - 1];
+                    }
+                    return Math.abs(location - floorNo);
+                }
             }
         }
 
@@ -108,7 +119,7 @@
 
         function reduce(array, combine, start) {
             var current = start;
-            array.forEach(function (element) {
+            map(array, function (element) {
                 current = combine(current, element);
             });
             return current;
