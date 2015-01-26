@@ -1,21 +1,15 @@
 {
     init: function(elevators, floors) {
-        Array.prototype.max = function() {
-          return Math.max.apply(null, this);
-        };
 
-        floors.forEach(function (floor) {
+        map(floors, checkForButtonPress);
+
+        map(elevators, checkFloorButton);
+
+        function checkForButtonPress(floor) {
             floor.on("up_button_pressed down_button_pressed", function() {
                 assignElevator(floor);
             });
-        });
-
-        elevators.forEach(function (elevator) {
-            checkFloorButton(elevator);
-            resetElevator(elevator);
-            elevator.destinationQueue.sort();
-            elevator.checkDestinationQueue();
-        });
+        }
 
         function checkFloorButton(elevator) {
             elevator.on("floor_button_pressed", function(floorNum) {
@@ -23,14 +17,6 @@
                     elevator.goToFloor(floorNum);
                 }
             });
-        }
-
-        function resetElevator(elevator) {
-            if (elevator.destinationQueue.length === 0 && elevator.loadFactor() > 0) {
-                floors.forEach(function (floor) {
-                    elevator.goToFloor(floor.floorNum());
-                });
-            }
         }
 
         function assignElevator(floor) {
