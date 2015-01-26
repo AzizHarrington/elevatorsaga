@@ -1,16 +1,18 @@
 {
     init: function(elevators, floors) {
 
+        // check floors & elevators for events
         map(floors, checkForButtonPress);
-
         map(elevators, checkFloorButton);
 
+        // button pressed at floor
         function checkForButtonPress(floor) {
             floor.on("up_button_pressed down_button_pressed", function() {
                 assignElevator(floor);
             });
         }
 
+        // button pressed inside elevator
         function checkFloorButton(elevator) {
             elevator.on("floor_button_pressed", function(floorNum) {
                 if (elevator.destinationQueue.indexOf(floorNum) === -1) {
@@ -19,6 +21,8 @@
             });
         }
 
+        // determine best elevator to send
+        // based on suitability score
         function assignElevator(floor) {
             var floorNo = floor.floorNum();
             var elevatorScores = map(elevators, scoreElevators);
@@ -43,17 +47,38 @@
                 var score;
                 var queue = elevator.destinationQueue;
 
-                var distanceFromFloor = getDistance();
+                var distanceFromFloor = getDistance2();
                 var floorInQueue = queue.indexOf(floorNo) > -1
                 var load = elevator.loadFactor();
 
-                score = distanceFromFloor;
+                if (floorInQueue) {
+                    // elevator is going to this floor
+                    // so give it best score
+                    score = 0;
+                } else {
+                    // otherwise base score on
+                    // how far away it is/will be
+                    score = distanceFromFloor;
+                }
+
                 console.log('score before ' + score);
                 console.log('  load ' + load);
+
+                // apply load factor to score
                 score = score + (10 * load);
                 console.log('  score after ' + score);
 
                 return [elevator, score];
+
+                function getDistance2() {
+                    var location;
+                    if (queue.length === 0) {
+                        location = elevator.currentFloor();
+                    } else {
+                        location = queue[queue.length - 1];
+                    }
+                    return Math.abs(location - floorNo);
+                }
 
                 function getDistance() {
                     if (queue.length === 0) {
