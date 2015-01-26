@@ -5,6 +5,9 @@
         map(floors, checkForButtonPress);
         map(elevators, checkFloorButton);
         map(elevators, checkPassingFloor);
+        // seems like most people board at ground floor
+        // comment out to optimize for moves
+        map(elevators, checkForIdle);
 
         // button pressed at floor
         function checkForButtonPress(floor) {
@@ -33,6 +36,13 @@
                     queue.splice(index, 1);
                     elevator.goToFloor(floorNum, true);
                 }
+            });
+        }
+
+        // if idle, send back to ground floor
+        function checkForIdle(elevator) {
+            elevator.on("idle", function() {
+                elevator.goToFloor(0, true);
             });
         }
 
