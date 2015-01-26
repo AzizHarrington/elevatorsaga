@@ -87,7 +87,7 @@
 
         function reduce(array, combine, start) {
             var current = start;
-            array.forEach(function (element) {
+            map(array, function (element) {
                 current = combine(current, element);
             });
             return current;
