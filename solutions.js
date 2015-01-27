@@ -1,13 +1,18 @@
 {
     init: function(elevators, floors) {
 
+        // set to true to optimize algorithm for moves
+        var optimizeMoves = false;
+        // set to true to optimize algorithm for wait
+        var optimizeWait = false;
+
         // check floors & elevators for events
         map(floors, checkForButtonPress);
         map(elevators, checkFloorButton);
         map(elevators, checkPassingFloor);
-        // seems like most people board at ground floor
-        // (but doesnt seem to matter much in benchmarking)
-        // map(elevators, checkForIdle);
+        if (!optimizeMoves && !optimizeWait) {
+            map(elevators, checkForIdle);
+        }
 
         // button pressed at floor
         function checkForButtonPress(floor) {
@@ -18,7 +23,7 @@
 
         // button pressed inside elevator
         function checkFloorButton(elevator) {
-            elevator.on("floor_button_pressed", function(floorNum) {
+            elevator.on("floor_button_pressed", function (floorNum) {
                 if (elevator.destinationQueue.indexOf(floorNum) === -1) {
                     elevator.goToFloor(floorNum);
                 }
@@ -28,20 +33,30 @@
         // if passing floor in destination queue, lets
         // stop there, then be on our way
         function checkPassingFloor(elevator) {
-            elevator.on("passing_floor", function(floorNum, direction) {
+            elevator.on("passing_floor", function (floorNum, direction) {
                 var queue = elevator.destinationQueue;
                 var index = queue.indexOf(floorNum);
                 if (index > -1) {
+                    var floor = floors[floorNum];
+                    var goingUp = floor.buttonStates.up === 'activated';
+                    var goingDown = floor.buttonStates.down === 'activated';
+                    var passengerOnFloor = goingUp || goingDown;
+                    var floorInRequests = elevator.getPressedFloors().indexOf(floorNum) > -1;
                     queue.splice(index, 1);
                     elevator.checkDestinationQueue();
-                    elevator.goToFloor(floorNum, true);
+                    if (passengerOnFloor || floorInRequests) {
+                        elevator.goToFloor(floorNum, true);
+                    }
+                    // floor was not in requests, and passenger was
+                    // not on floor, so we dont do anything with the
+                    // floor number, just leave it removed
                 }
             });
         }
 
         // if idle, send back to ground floor
         function checkForIdle(elevator) {
-            elevator.on("idle", function() {
+            elevator.on("idle", function () {
                 elevator.goToFloor(0);
             });
         }
@@ -75,7 +90,21 @@
 
                 score = distanceFromFloor;
                 // apply load factor to score
-                score = score + (10 * load);
+                if (optimizeMoves) {
+                    // if move optimization is enabled,
+                    // then we only apply factor load
+                    // when the elevator is full
+                    if (load === 1) {
+                        score += (10 * load);
+                    // when elevator is partially full,
+                    // we give it a lower (better) score
+                    } else if (load < .7) {
+                        score -= (10 * load);
+                    }
+                } else {
+                    // otherwise apply as normal
+                    score += (10 * load);
+                }
 
                 return [elevator, score];
 
