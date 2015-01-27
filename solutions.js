@@ -2,7 +2,7 @@
     init: function(elevators, floors) {
 
         // set to true to optimize algorithm for moves
-        var optimizeMoves = false;
+        var optimizeMoves = true;
         // set to true to optimize algorithm for wait
         var optimizeWait = false;
 
@@ -98,7 +98,7 @@
                         score += (10 * load);
                     // when elevator is partially full,
                     // we give it a lower (better) score
-                    } else if (load < .7) {
+                    } else if (load < 1) {
                         score -= (10 * load);
                     }
                 } else {
