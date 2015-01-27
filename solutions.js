@@ -33,6 +33,7 @@
                 var index = queue.indexOf(floorNum);
                 if (index > -1) {
                     queue.splice(index, 1);
+                    elevator.checkDestinationQueue();
                     elevator.goToFloor(floorNum, true);
                 }
             });
