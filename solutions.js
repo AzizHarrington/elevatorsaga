@@ -2,7 +2,7 @@
     init: function(elevators, floors) {
 
         // set to true to optimize algorithm for moves
-        var optimizeMoves = true;
+        var optimizeMoves = false;
         // set to true to optimize algorithm for wait
         var optimizeWait = false;
 
