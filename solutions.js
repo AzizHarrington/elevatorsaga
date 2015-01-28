@@ -16,6 +16,7 @@
 
         // button pressed at floor
         function checkForButtonPress(floor) {
+            // for now we don't differentiate between up and down passengers
             floor.on("up_button_pressed down_button_pressed", function() {
                 assignElevator(floor);
             });
@@ -25,6 +26,7 @@
         function checkFloorButton(elevator) {
             elevator.on("floor_button_pressed", function (floorNum) {
                 if (elevator.destinationQueue.indexOf(floorNum) === -1) {
+                    // go to floor if we're not already headed there
                     elevator.goToFloor(floorNum);
                 }
             });
@@ -42,17 +44,25 @@
                     var goingDown = floor.buttonStates.down === 'activated';
                     var passengerOnFloor = goingUp || goingDown;
                     var floorInRequests = elevator.getPressedFloors().indexOf(floorNum) > -1;
+                    // remove the floor as we decide what to do with it
                     queue.splice(index, 1);
                     elevator.checkDestinationQueue();
+                    // passenger has requested this floor, so stop
                     if (floorInRequests) {
                         elevator.goToFloor(floorNum, true);
                     } else if (passengerOnFloor) {
+                        // passenger is waiting at this floor,
+                        // decide to stop or not
                         if (elevator.loadFactor() < .7) {
+                            // our elevator is not too crowded, so lets stop
                             elevator.goToFloor(floorNum, true);
                         } else {
+                            // too crowded now
                             if (optimizeMoves) {
+                                // add it back to our queue for later
                                 elevator.goToFloor(floorNum);
                             } else {
+                                // give it to another elevator
                                 assignElevator(floor);
                             }
                         }
@@ -103,10 +113,12 @@
                 if (optimizeMoves) {
                     // if move optimization is enabled,
                     // then we favor fuller elevators
-                    score -= (10 * load);
+                    score -= (queue.length * (1 + load));
+                } else if (optimizeWait) {
+                    score += (queue.length * (1 + load));
                 } else {
                     // otherwise favor lighter elevators
-                    score += (10 * load);
+                    score += (queue.length * (1 + load));
                 }
 
                 return [elevator, score];
