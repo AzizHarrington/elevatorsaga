@@ -44,8 +44,18 @@
                     var floorInRequests = elevator.getPressedFloors().indexOf(floorNum) > -1;
                     queue.splice(index, 1);
                     elevator.checkDestinationQueue();
-                    if (passengerOnFloor || floorInRequests) {
+                    if (floorInRequests) {
                         elevator.goToFloor(floorNum, true);
+                    } else if (passengerOnFloor) {
+                        if (elevator.loadFactor() < .7) {
+                            elevator.goToFloor(floorNum, true);
+                        } else {
+                            if (optimizeMoves) {
+                                elevator.goToFloor(floorNum);
+                            } else {
+                                assignElevator(floor);
+                            }
+                        }
                     }
                     // floor was not in requests, and passenger was
                     // not on floor, so we dont do anything with the
@@ -92,17 +102,10 @@
                 // apply load factor to score
                 if (optimizeMoves) {
                     // if move optimization is enabled,
-                    // then we only apply factor load
-                    // when the elevator is full
-                    if (load === 1) {
-                        score += (10 * load);
-                    // when elevator is partially full,
-                    // we give it a lower (better) score
-                    } else if (load < 1) {
-                        score -= (10 * load);
-                    }
+                    // then we favor fuller elevators
+                    score -= (10 * load);
                 } else {
-                    // otherwise apply as normal
+                    // otherwise favor lighter elevators
                     score += (10 * load);
                 }
 
